@@ -9,16 +9,23 @@ var cheerio = require("cheerio");
 var low = require('lowdb');
 var fileAsync = require('lowdb/lib/storages/file-async');
 
-const db = low('./db/sheet.json', {
+var OrderProxy = require('./service/Order');
+var MusicProxy = require('./service/Music');
+
+//歌单库初始化
+const sheets = low('./db/sheet.json', {
     storage: fileAsync
 });
-db.defaults({sheets: []}).write();
+sheets.defaults({sheets: []}).write();
 
 
-var getMusic = function (url) {
-    console.log(url);
+
+var getMusic = function (order) {
+    var order_url = 'http://music.163.com' + order.href;
+    console.log(order_url);
+
     request ({
-        url: url,
+        url: order_url,
         method: "GET",
         headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36'
@@ -26,52 +33,71 @@ var getMusic = function (url) {
     }, function(error, response, body) {
         if(!error) {
             var $ = cheerio.load(body);
-            var uls = $("#m-pl-container").children();
-            for(var i=1; i < uls.length; i++) {
-                var li = uls.eq(i);
-                var title = uls.eq(i).children('div').children('a').attr('title');
-                var href = uls.eq(i).children('div').children('a').attr('href');
-                var img = uls.eq(i).children('div').children('img').attr('src');
-                var auth_url = uls.eq(i).find('.s-fc3').attr('href');
-                var auth = uls.eq(i).find('.s-fc3').attr('title');
 
-                var music_sheet = {
-                    title: title,
-                    href: href,
-                    img: img,
-                    auth: auth,
-                    auth_url: auth_url
-                };
+            //parse order info
+            parseOrderInfo(order.id, $);
 
-                saveToDB(music_sheet);
-            }
+            //parse music list
+            parseMusicList($);
         }
     });
 };
 
 
-var saveToDB = function (data) {
-    //判断去除重复
-    var size = db.get('sheets').filter({href: data.href}).size().value();
-    if(size > 0){
-        return;
+//解析歌单
+var parseOrderInfo = function (id, $) {
+    //order info
+    var orderInfo = $('.cntc').children();
+
+    //时间 评论数 收藏 标签 描述 歌曲数 播放次数
+    var time = orderInfo.find('span').eq(1)[0].children[0].data;
+    var num_comment = orderInfo.find('span').eq(2)[0].children[0].data;
+    var num_follow = $('.u-btni-fav').children('i').text().match(/\d+/)[0];
+    var tags = [];
+    for(var i=0;i<$('.u-tag').find('i').length;i++) {
+        tags.push($('.u-tag').find('i')[i].children[0].data)
     }
-    db.get('sheets')
-        .push(data)
-        .last()
-        .assign({id: Date.now()})
-        .write();
+    var desc = $('#album-desc-more').text();
+    var num_music = parseInt($('#playlist-track-count').text());
+    var play_count = $('#play-count').text();
+    var order = {
+        time: time.substring(0, 10),
+        num_comment: parseInt(num_comment),
+        num_follow: parseInt(num_follow),
+        num_music: num_music,
+        play_count: parseInt(play_count),
+        tags: tags
+    };
+
+    OrderProxy.updateByQuery({id: id}, order);
+};
+
+var parseMusicList = function ($) {
+    var lis = $('#song-list-pre-cache').children('ul')[0].children;
+    lis.forEach(function (li) {
+        var href = li.children[0].attribs.href;
+        var name = li.children[0].children[0].data;
+
+        MusicProxy.save({href: href, name: name});
+    });
 };
 
 
-var base_url = 'http://music.163.com/discover/playlist/';
-var getHotMusicSheetByUrl = function () {
-    var num = 0, max = 1435;
-    var suffix = '?order=hot&cat=%E5%85%A8%E9%83%A8&limit=35&offset=';
-    for(var i=0;i<max;i=i+35) {
-        var url = base_url + suffix + i;
-        getMusic(url);
-    }
+
+var songList = function () {
+    sheets.get('sheets').value().forEach(function (order) {
+        getMusic(order);
+    });
 };
 
-getHotMusicSheetByUrl();
+songList();
+
+/*
+getMusic({
+    "title": "2017年1月-3月新番OP&ED（装修中)",
+    "href": "/playlist?id=536359367",
+    "img": "http://p3.music.126.net/EGHx4hVY-_TXC8gRwNDP3g==/18516875325064826.jpg?param=140y140",
+    "auth": "Erc丶凌乱",
+    "auth_url": "/user/home?id=61759420",
+    "id": 1487051872497
+});*/

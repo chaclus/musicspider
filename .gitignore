@@ -1,3 +1,6 @@
 # ignore webstorm
 *.iml
 .idea/
+
+# nodegs modules
+node_modules/
