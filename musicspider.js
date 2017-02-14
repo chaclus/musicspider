@@ -6,6 +6,7 @@
 
 var request = require("request");
 var cheerio = require("cheerio");
+var EventProxy = require('eventproxy');
 var low = require('lowdb');
 var fileAsync = require('lowdb/lib/storages/file-async');
 
@@ -19,8 +20,14 @@ const sheets = low('./db/sheet.json', {
 sheets.defaults({sheets: []}).write();
 
 
+var ep = new EventProxy();
+ep.fail(function (err) {
+    if(err) {
+        console.error("ep err > ", err);
+    }
+});
 
-var getMusic = function (order) {
+var getMusic = function (order, callback) {
     var order_url = 'http://music.163.com' + order.href;
     console.log(order_url);
 
@@ -38,7 +45,16 @@ var getMusic = function (order) {
             parseOrderInfo(order.id, $);
 
             //parse music list
-            parseMusicList($);
+            parseMusicList($, function (err, ret) {
+               ep.emit("result")
+            });
+
+            ep.on('result', function () {
+                callback(null, true);
+            });
+
+        }else{
+            callback(error, null);
         }
     });
 };
@@ -72,13 +88,19 @@ var parseOrderInfo = function (id, $) {
     OrderProxy.updateByQuery({id: id}, order);
 };
 
-var parseMusicList = function ($) {
+var parseMusicList = function ($, callback) {
     var lis = $('#song-list-pre-cache').children('ul')[0].children;
     lis.forEach(function (li) {
         var href = li.children[0].attribs.href;
         var name = li.children[0].children[0].data;
 
         MusicProxy.save({href: href, name: name});
+
+        ep.emit('save_music_list');
+    });
+
+    ep.after("save_music_list", lis.length, function () {
+        callback(null, true);
     });
 };
 
