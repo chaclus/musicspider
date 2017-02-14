@@ -1,0 +1,15 @@
+{
+  "name": "musicspiderr",
+  "version": "1.0.0",
+  "description": "music spider",
+  "main": "musicspider.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "cheerio": "^0.22.0",
+    "fs": "0.0.1-security",
+    "lowdb": "^0.15.4",
+    "request": "^2.79.0"
+  }
+}
