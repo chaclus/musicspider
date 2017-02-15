@@ -9,12 +9,19 @@ var fileAsync = require('lowdb/lib/storages/file-async');
 var ORDER_DB_NAME = "sheets";
 
 //歌单库初始化
-const orders = low('./db/sheet.json', {
+const orders = low('../db/sheet.json', {
     storage: fileAsync
 });
 orders.defaults({sheets: []}).write();
 
 
+exports.getAll = function (callback) {
+    try{
+        callback(null, orders.get(ORDER_DB_NAME).value())
+    }catch (e){
+        callback(e, null);
+    }
+};
 exports.save = function (data) {
     var size = orders.get(ORDER_DB_NAME).filter({href: data.href}).size().value();
     if(size > 0){

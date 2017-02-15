@@ -9,7 +9,7 @@ var fileAsync = require('lowdb/lib/storages/file-async');
 var MUSIC_DB_NAME = "musics";
 
 //歌曲库初始化
-const musics = low('./db/music.json', {
+const musics = low('../db/music.json', {
     storage: fileAsync
 });
 musics.defaults({musics: []}).write();
