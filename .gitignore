@@ -4,3 +4,6 @@
 
 # nodegs modules
 node_modules/
+
+# ignore db files
+db/
