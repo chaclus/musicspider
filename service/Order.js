@@ -2,7 +2,7 @@
  * Created by chaclus on 2017/2/14.
  */
 
-
+/*
 var low = require('lowdb');
 var fileAsync = require('lowdb/lib/storages/file-async');
 
@@ -47,4 +47,54 @@ exports.updateByQuery = function (query, data) {
         .find(query)
         .assign(data)
         .write();
+};
+*/
+/*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>mongoose<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+
+var Order = require('../models').Order;
+
+exports.getAll = function (callback) {
+    Order.find({}, callback);
+};
+
+
+exports.save = function (data, callback) {
+    Order.findOne({id: data.id}, function (err, ret) {
+        if(err) {
+            callback(err, null);
+        }else if(ret) {
+            //music existed
+            callback(null, null);
+        }else{
+            var doc = new Order({
+                id: data.id,
+                title: data.title,
+                href: data.href,
+                img: data.img,
+                author: data.author,
+                author_url: data.author_url,
+                time: data.time,
+                num_comment: data.num_comment,
+                num_follow: data.num_follow,
+                num_music: data.num_music,
+                play_count: data.play_count,
+                tags: data.tags
+            });
+            doc.save(callback);
+        }
+    });
+};
+
+exports.updateById = function (id, data, callback) {
+    Order.findOne({id: id}, function (err, order) {
+        if(err || !order) {
+            callback(err, null);
+        }else{
+            for(var key in data) {
+                order[key] = data[key];
+            }
+
+            order.save(callback);
+        }
+    });
 };

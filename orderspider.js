@@ -1,11 +1,8 @@
 /**
  * Created by chaclus on 2017/2/14.
  */
-
 var kue = require('kue');
-
 var config = require('./config');
-var OrderProxy = require('./service/Order');
 
 
 //init redis of kue dependency
@@ -20,12 +17,14 @@ var queue = kue.createQueue({
 });
 
 
-var musicListener = require('./listener/MusicSpiderListener');
-musicListener.listen();
+var orderListener = require('./listener/OrderSpiderListener');
+orderListener.listen();
+
+var base_url = 'http://music.163.com/discover/playlist/';
 
 
 var addJob = function (order) {
-    var job = queue.create(config.queue.order_name, order).save(function (err) {
+    var job = queue.create(config.queue.url_name, order).save(function (err) {
         if(err) {
             console.error("ERR save job to queue at addJob mth.", err);
         }else{
@@ -46,17 +45,13 @@ var addJob = function (order) {
     });
 };
 
-var songList = function () {
-    OrderProxy.getAll(function (err, orders) {
-        if(err) {
-            console.error("ERR OrderProxy.getAll", err);
-        }else{
-            orders.forEach(function (order) {
-                addJob(order);
-            });
-        }
-    });
+var getHotMusicSheetByUrl = function () {
+    var num = 0, max = 1435;
+    var suffix = '?order=hot&cat=%E5%85%A8%E9%83%A8&limit=35&offset=';
+    for(var i=0; i<max; i=i+35) {
+        var url = base_url + suffix + i;
+        addJob({url: url});
+    }
 };
 
-songList();
-
+getHotMusicSheetByUrl();
