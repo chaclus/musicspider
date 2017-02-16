@@ -38,12 +38,22 @@ var getMusic = function (order, callback) {
             var $ = cheerio.load(body);
 
             //parse order info
-            parseOrderInfo(order.id, $);
-
-            //parse music list
-            parseMusicList($);
-
-            callback(null, true);
+            parseOrderInfo(order.id, $, function (err, data) {
+                if(err || !data) {
+                    console.error("ERR musicSpider.getMusic > parseOrderInfo > ", err);
+                    callback(err, null);
+                }else{
+                    //parse music list
+                    parseMusicList($, function (err, ret) {
+                        if(err || !ret) {
+                            console.error("ERR musicSpider.getMusic > parseMusicList > ", err);
+                            callback(err, null);
+                        }else{
+                            callback(null, true);
+                        }
+                    });
+                }
+            });
         }else{
             callback(error, null);
         }
@@ -52,14 +62,14 @@ var getMusic = function (order, callback) {
 
 
 //解析歌单
-var parseOrderInfo = function (id, $) {
+var parseOrderInfo = function (id, $, callback) {
     //order info
     var orderInfo = $('.cntc').children();
 
     //时间 评论数 收藏 标签 描述 歌曲数 播放次数
     // var time = orderInfo.find('span').eq(1)[0].children[0].data;
     var time = $('.user').find('span')[1].children[0].data
-    var num_comment = orderInfo.find('span').eq(2)[0].children[0].data;
+    var num_comment = parseInt(orderInfo.find('span').eq(2)[0].children[0].data);
     var num_follow = $('.u-btni-fav').children('i').text().match(/\d+/)[0];
     var tags = [];
     for(var i=0;i<$('.u-tag').find('i').length;i++) {
@@ -70,23 +80,38 @@ var parseOrderInfo = function (id, $) {
     var play_count = $('#play-count').text();
     var order = {
         time: time.substring(0, 10),
-        num_comment: parseInt(num_comment),
+        num_comment: num_comment ? num_comment : 0,
         num_follow: parseInt(num_follow),
         num_music: num_music,
         play_count: parseInt(play_count),
         tags: tags
     };
 
-    OrderProxy.updateByQuery({id: id}, order);
+    OrderProxy.updateById(id, order, function (err, data) {
+        callback(err, data);
+    });
 };
 
 var parseMusicList = function ($, callback) {
+    var ep = new EventProxy();
+    ep.fail(function (err) {
+        if(err) {
+            console.error("ERR musicSpider.parseMusicList > ", err);
+            callback(err, null);
+        }
+    });
     var lis = $('#song-list-pre-cache').children('ul')[0].children;
     lis.forEach(function (li) {
         var href = li.children[0].attribs.href;
         var name = li.children[0].children[0].data;
 
-        MusicProxy.save({href: href, name: name});
+        MusicProxy.save({id:href.match(/\d+/)[0],href: href, name: name}, function (err, data) {
+            ep.emit("result");
+        });
+    });
+
+    ep.after("result", lis.length, function () {
+        callback(null, true);
     });
 };
 
@@ -105,6 +130,7 @@ exports.listen = function () {
 
 
 //test
+// exports.listen();
 /*
 getMusic({
     "title": "知乎的朋友让我看到你们的荧光棒！",
