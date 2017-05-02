@@ -16,8 +16,10 @@ mongoose.connect(config.mongodb.url,{keepAlive: 10}, function (err) {
 //models
 require('./Music');
 require('./Order');
+require('./Artist');
 
 
 
 exports.Order            = mongoose.model('MsOrder');
 exports.Music            = mongoose.model('MsMusic');
+exports.Artist            = mongoose.model('MsArtist');

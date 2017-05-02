@@ -23,8 +23,8 @@ var queue = kue.createQueue({
 });
 
 
-var getMusic = function (order, callback) {
-    var order_url = 'http://music.163.com' + order.href;
+var getMusicContent = function (music, callback) {
+    var order_url = 'http://music.163.com' + music.href;
     console.log(order_url);
 
     request ({
@@ -38,7 +38,7 @@ var getMusic = function (order, callback) {
             var $ = cheerio.load(body);
 
             //parse order info
-            parseOrderInfo(order.id, $, function (err, data) {
+            parseOrderInfo(music.id, $, function (err, data) {
                 if(err || !data) {
                     console.error("ERR musicSpider.getMusic > parseOrderInfo > ", err);
                     callback(err, null);
@@ -100,10 +100,6 @@ var parseMusicList = function ($, callback) {
             callback(err, null);
         }
     });
-    if(!$('#song-list-pre-cache')) {
-        console.warn("this song order is empty.");
-        return callback(null, true);
-    }
     var lis = $('#song-list-pre-cache').children('ul')[0].children;
     lis.forEach(function (li) {
         var href = li.children[0].attribs.href;
@@ -137,20 +133,21 @@ exports.listen = function () {
 // exports.listen();
 /*
 getMusic({
-    "id" : "550628755",
-    "title" : "【BILIBILI】拜年祭2017",
-    "href" : "/playlist?id=550628755",
-    "img" : "http://p4.music.126.net/16jKz13pDl6FrOTkpuJRiQ==/18527870441410089.jpg?param=140y140",
-    "tags" : [
-        "另类/独立",
-        "ACG"
-    ],
-}, function (err, ret) {
-    if(err) {
-        console.error("test getMusic >> ", err);
-    }else{
-        console.log("getMusic successfully.");
-    }
-
-});*/
-
+    "title": "知乎的朋友让我看到你们的荧光棒！",
+    "href": "/playlist?id=590785294",
+    "img": "http://p3.music.126.net/XH2UX7XO2Et2vLonyCE7sA==/109951162855417315.jpg?param=140y140",
+    "auth": "蛋蛋Mc",
+    "auth_url": "/user/home?id=7660015",
+    "id": 1487051870373,
+    "time": "2017-02-04",
+    "num_comment": 38,
+    "num_follow": 350,
+    "num_music": 12,
+    "play_count": 3505,
+    "tags": [
+        "欧美",
+        "放松",
+        "兴奋"
+    ]
+})
+    */
